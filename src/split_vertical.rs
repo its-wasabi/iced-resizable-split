@@ -4,9 +4,16 @@ pub struct SplitVertical<'a, Message, Theme, Renderer> {
 
     state: super::state::State,
     on_drag: Box<dyn Fn(super::state::State) -> Message + 'a>,
+
+    drag_area_size: f32,
+
+    style: super::style::StyleFn<'a, Theme>,
 }
 
-impl<'a, Message, Theme, Renderer> SplitVertical<'a, Message, Theme, Renderer> {
+impl<'a, Message, Theme, Renderer> SplitVertical<'a, Message, Theme, Renderer>
+where
+    Theme: 'a,
+{
     pub fn new(
         left: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
         right: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
@@ -18,7 +25,24 @@ impl<'a, Message, Theme, Renderer> SplitVertical<'a, Message, Theme, Renderer> {
             right: right.into(),
             state,
             on_drag: Box::new(message),
+            drag_area_size: super::DEFAULT_DRAG_AREA_SIZE,
+            style: Box::new(|_, _| super::style::Style::default()),
         }
+    }
+
+    #[must_use]
+    pub fn style(
+        mut self,
+        style: impl Fn(&Theme, super::style::State) -> super::style::Style + 'a,
+    ) -> Self {
+        self.style = Box::new(style);
+        self
+    }
+
+    #[must_use]
+    pub const fn drag_area_size(mut self, size: f32) -> Self {
+        self.drag_area_size = size;
+        self
     }
 }
 
@@ -97,9 +121,9 @@ where
         let bounds = layout.bounds();
         let divider_x_pos = bounds.width.mul_add(self.state.ratio(), bounds.x);
         let drag_rect = iced_core::Rectangle {
-            x: divider_x_pos - super::DRAG_AREA_SIZE / 2.0,
+            x: divider_x_pos - self.drag_area_size / 2.0,
             y: bounds.y,
-            width: super::DRAG_AREA_SIZE,
+            width: self.drag_area_size,
             height: bounds.height,
         };
 
@@ -131,16 +155,16 @@ where
                 }
             }
 
-            iced_core::Event::Mouse(iced_core::mouse::Event::CursorMoved { position }) => {
-                if self.state.is_dragging() {
-                    let relative_x = position.x - bounds.x;
-                    let new_ratio = relative_x / bounds.width;
-                    let mut next_state = self.state;
-                    next_state.set_ratio(new_ratio);
-                    shell.publish((self.on_drag)(next_state));
-                    shell.capture_event();
-                    return;
-                }
+            iced_core::Event::Mouse(iced_core::mouse::Event::CursorMoved { position })
+                if self.state.is_dragging() =>
+            {
+                let relative_x = position.x - bounds.x;
+                let new_ratio = relative_x / bounds.width;
+                let mut next_state = self.state;
+                next_state.set_ratio(new_ratio);
+                shell.publish((self.on_drag)(next_state));
+                shell.capture_event();
+                return;
             }
 
             _ => {}
@@ -205,19 +229,27 @@ where
         );
 
         let bounds = layout.bounds();
-        let divider_x = bounds.x + (bounds.width * self.state.ratio());
+        let divider_x = bounds.width.mul_add(self.state.ratio(), bounds.x);
+
+        let status = if self.state.is_dragging() {
+            super::style::State::Dragging
+        } else {
+            super::style::State::Idle
+        };
+
+        let style = (self.style)(theme, status);
 
         renderer.fill_quad(
             iced_core::renderer::Quad {
                 bounds: iced_core::Rectangle {
-                    x: divider_x - (super::DRAG_AREA_SIZE / 2.0),
+                    x: divider_x - (style.divider_width / 2.0),
                     y: bounds.y,
-                    width: super::DRAG_AREA_SIZE,
+                    width: style.divider_width,
                     height: bounds.height,
                 },
-                ..iced_core::renderer::Quad::default()
+                ..Default::default()
             },
-            iced_core::Color::from_rgb8(255, 0, 0),
+            style.divider_color,
         );
     }
 }
