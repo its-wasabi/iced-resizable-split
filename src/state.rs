@@ -30,6 +30,10 @@ impl State {
         }
     }
 
+    pub const fn update(&mut self, new_state: Self) {
+        *self = new_state;
+    }
+
     pub(super) const fn ratio(&self) -> f32 {
         self.ratio
     }

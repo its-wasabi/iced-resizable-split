@@ -8,14 +8,14 @@ pub struct SplitVertical<'a, Message, Theme, Renderer> {
 
 impl<'a, Message, Theme, Renderer> SplitVertical<'a, Message, Theme, Renderer> {
     pub fn new(
-        top: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
-        bottom: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
+        left: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
+        right: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
         state: super::state::State,
         message: impl Fn(super::state::State) -> Message + 'a,
     ) -> Self {
         Self {
-            left: top.into(),
-            right: bottom.into(),
+            left: left.into(),
+            right: right.into(),
             state,
             on_drag: Box::new(message),
         }
@@ -75,7 +75,7 @@ where
 
         let right_limits = limits.max_width(size.width - split_x_pos);
         let right_node = self
-            .left
+            .right
             .as_widget_mut()
             .layout(&mut tree.children[1], renderer, &right_limits)
             .move_to(iced_core::Point::new(split_x_pos, 0.0));

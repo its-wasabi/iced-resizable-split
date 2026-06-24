@@ -76,7 +76,7 @@ where
                 .as_widget_mut()
                 .layout(&mut tree.children[0], renderer, &top_limits);
 
-        let bottom_limits = limits.max_width(size.height - split_y_pos);
+        let bottom_limits = limits.max_height(size.height - split_y_pos);
         let bottom_node = self
             .bottom
             .as_widget_mut()
@@ -161,7 +161,7 @@ where
             viewport,
         );
 
-        self.top.as_widget_mut().update(
+        self.bottom.as_widget_mut().update(
             &mut tree.children[1],
             event,
             layouts.next().unwrap(),
