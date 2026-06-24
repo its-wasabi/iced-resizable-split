@@ -1,5 +1,3 @@
-# Resizable split for iced
-as name suggests...
 # Example usage
 ```rust
 struct App {
