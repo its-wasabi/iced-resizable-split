@@ -24,7 +24,7 @@ impl App {
     fn view(&self) -> iced::Element<'_, AppMessage> {
         iced_resizable_split::split_vertical(
             iced::widget::text("TOP split"),
-            iced::widget::text("TOP split"),
+            iced::widget::text("BOTTOM split"),
             self.split_state,
             AppMessage::SplitDragged,
         )

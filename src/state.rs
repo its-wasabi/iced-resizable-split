@@ -16,7 +16,11 @@ impl Default for State {
     }
 }
 
-pub(super) type IsDragging = bool;
+#[derive(Debug, Default, Clone, Copy)]
+pub(super) struct InternalState {
+    pub(super) is_dragging: bool,
+    pub(super) is_hovering: bool,
+}
 
 impl State {
     #[must_use]

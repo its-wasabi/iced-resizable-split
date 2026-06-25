@@ -129,11 +129,11 @@ where
     Renderer: iced_core::renderer::Renderer,
 {
     fn tag(&self) -> iced_core::widget::tree::Tag {
-        iced_core::widget::tree::Tag::of::<super::state::IsDragging>()
+        iced_core::widget::tree::Tag::of::<super::state::InternalState>()
     }
 
     fn state(&self) -> iced_core::widget::tree::State {
-        iced_core::widget::tree::State::new(false)
+        iced_core::widget::tree::State::new(super::state::InternalState::default())
     }
 
     fn children(&self) -> Vec<iced_core::widget::Tree> {
@@ -194,7 +194,7 @@ where
         shell: &mut iced_core::Shell<'_, Message>,
         viewport: &iced_core::Rectangle,
     ) {
-        let is_dragging = tree.state.downcast_mut::<super::state::IsDragging>();
+        let internal_state = tree.state.downcast_mut::<super::state::InternalState>();
 
         let bounds = layout.bounds();
         let drag_rect = self.create_split_rect(self.drag_area_size, bounds);
@@ -207,7 +207,7 @@ where
                 if let Some(cursor_pos) = cursor.position()
                     && drag_rect.contains(cursor_pos)
                 {
-                    *is_dragging = true;
+                    internal_state.is_dragging = true;
                     shell.capture_event();
                     return;
                 }
@@ -216,26 +216,33 @@ where
             iced_core::Event::Mouse(
                 iced_core::mouse::Event::CursorLeft
                 | iced_core::mouse::Event::ButtonReleased(iced_core::mouse::Button::Left),
-            ) if *is_dragging => {
-                *is_dragging = false;
+            ) if internal_state.is_dragging => {
+                internal_state.is_dragging = false;
 
                 shell.request_redraw();
                 shell.capture_event();
                 return;
             }
 
-            iced_core::Event::Mouse(iced_core::mouse::Event::CursorMoved { position })
-                if *is_dragging =>
-            {
-                let new_ratio = self.ratio(*position, bounds);
+            iced_core::Event::Mouse(iced_core::mouse::Event::CursorMoved { position }) => {
+                if internal_state.is_dragging {
+                    let next_state = self
+                        .state
+                        .copy_with_new_ratio(self.ratio(*position, bounds));
 
-                let next_state = self.state.copy_with_new_ratio(new_ratio);
-                if next_state != self.state {
-                    shell.publish((self.on_drag)(next_state));
+                    if next_state != self.state {
+                        shell.publish((self.on_drag)(next_state));
+                    }
+
+                    shell.capture_event();
+                    return;
                 }
 
-                shell.capture_event();
-                return;
+                let is_over_divider = drag_rect.contains(*position);
+                if is_over_divider != internal_state.is_hovering {
+                    internal_state.is_hovering = is_over_divider;
+                    shell.request_redraw();
+                }
             }
 
             _ => {}
@@ -299,15 +306,10 @@ where
             viewport,
         );
 
-        let bounds = layout.bounds();
-        let is_hovering = cursor.position().is_some_and(|position| {
-            let hover_rect = self.create_split_rect(self.drag_area_size, bounds);
-            hover_rect.contains(position)
-        });
-
-        let status = if *tree.state.downcast_ref::<super::state::IsDragging>() {
+        let internal_state = tree.state.downcast_ref::<super::state::InternalState>();
+        let status = if internal_state.is_dragging {
             super::style::State::Dragging
-        } else if is_hovering {
+        } else if internal_state.is_hovering {
             super::style::State::Hovering
         } else {
             super::style::State::Idle
@@ -317,7 +319,7 @@ where
 
         renderer.fill_quad(
             iced_core::renderer::Quad {
-                bounds: self.create_split_rect(style.divider_width, bounds),
+                bounds: self.create_split_rect(style.divider_width, layout.bounds()),
                 ..Default::default()
             },
             style.divider_color,
