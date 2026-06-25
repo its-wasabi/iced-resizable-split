@@ -1,23 +1,20 @@
-pub struct Split<'a, Message, Theme, Renderer> {
+pub struct Split<'a, Message, Renderer> {
     axis: Axis,
-    first: iced_core::Element<'a, Message, Theme, Renderer>,
-    second: iced_core::Element<'a, Message, Theme, Renderer>,
+    first: iced_core::Element<'a, Message, iced_core::Theme, Renderer>,
+    second: iced_core::Element<'a, Message, iced_core::Theme, Renderer>,
 
     state: super::state::State,
     on_drag: Box<dyn Fn(super::state::State) -> Message + 'a>,
 
     drag_area_size: f32,
-    style: super::style::StyleFn<'a, Theme>,
+    style: super::style::StyleFn<'a>,
 }
 
-impl<'a, Message, Theme, Renderer> Split<'a, Message, Theme, Renderer>
-where
-    Theme: 'a,
-{
+impl<'a, Message, Renderer> Split<'a, Message, Renderer> {
     pub fn new(
         axis: Axis,
-        first: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
-        second: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
+        first: impl Into<iced_core::Element<'a, Message, iced_core::Theme, Renderer>>,
+        second: impl Into<iced_core::Element<'a, Message, iced_core::Theme, Renderer>>,
         state: super::state::State,
         message: impl Fn(super::state::State) -> Message + 'a,
     ) -> Self {
@@ -28,14 +25,30 @@ where
             state,
             on_drag: Box::new(message),
             drag_area_size: super::DEFAULT_DRAG_AREA_SIZE,
-            style: Box::new(|_, _| super::style::Style::default()),
+            style: Box::new(|theme, state| {
+                let palette = theme.extended_palette();
+                match state {
+                    crate::style::State::Idle => super::style::Style {
+                        divider_color: palette.background.strong.color,
+                        divider_width: 1.0,
+                    },
+                    crate::style::State::Hovering => super::style::Style {
+                        divider_color: palette.primary.base.color,
+                        divider_width: 1.0,
+                    },
+                    crate::style::State::Dragging => super::style::Style {
+                        divider_color: palette.primary.strong.color,
+                        divider_width: 1.0,
+                    },
+                }
+            }),
         }
     }
 
     #[must_use]
     pub fn style(
         mut self,
-        style: impl Fn(&Theme, super::style::State) -> super::style::Style + 'a,
+        style: impl Fn(&iced_core::Theme, super::style::State) -> super::style::Style + 'a,
     ) -> Self {
         self.style = Box::new(style);
         self
@@ -48,7 +61,7 @@ where
     }
 }
 
-impl<Message, Theme, Renderer> Split<'_, Message, Theme, Renderer> {
+impl<Message, Renderer> Split<'_, Message, Renderer> {
     fn split_pos(&self, size: iced_core::Size) -> f32 {
         match self.axis {
             Axis::Vertical => size.width * self.state.ratio(),
@@ -123,8 +136,8 @@ impl<Message, Theme, Renderer> Split<'_, Message, Theme, Renderer> {
     }
 }
 
-impl<Message, Theme, Renderer> iced_core::Widget<Message, Theme, Renderer>
-    for Split<'_, Message, Theme, Renderer>
+impl<Message, Renderer> iced_core::Widget<Message, iced_core::Theme, Renderer>
+    for Split<'_, Message, Renderer>
 where
     Renderer: iced_core::renderer::Renderer,
 {
@@ -208,6 +221,8 @@ where
                     && drag_rect.contains(cursor_pos)
                 {
                     internal_state.is_dragging = true;
+
+                    shell.request_redraw();
                     shell.capture_event();
                     return;
                 }
@@ -281,7 +296,7 @@ where
         &self,
         tree: &iced_core::widget::Tree,
         renderer: &mut Renderer,
-        theme: &Theme,
+        theme: &iced_core::Theme,
         style: &iced_core::renderer::Style,
         layout: iced_core::Layout<'_>,
         cursor: iced_core::mouse::Cursor,
@@ -356,14 +371,13 @@ where
     }
 }
 
-impl<'a, Message, Theme, Renderer> From<Split<'a, Message, Theme, Renderer>>
-    for iced_core::Element<'a, Message, Theme, Renderer>
+impl<'a, Message, Renderer> From<Split<'a, Message, Renderer>>
+    for iced_core::Element<'a, Message, iced_core::Theme, Renderer>
 where
     Message: 'a,
-    Theme: 'a,
     Renderer: iced_core::Renderer + 'a,
 {
-    fn from(value: Split<'a, Message, Theme, Renderer>) -> Self {
+    fn from(value: Split<'a, Message, Renderer>) -> Self {
         Self::new(value)
     }
 }
