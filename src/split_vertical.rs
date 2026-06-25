@@ -137,20 +137,21 @@ where
                     && drag_rect.contains(cursor_pos)
                 {
                     *is_dragging = true;
-                    let next_state = self.state;
-                    shell.publish((self.on_drag)(next_state));
                     shell.capture_event();
                     return;
                 }
             }
 
-            iced_core::Event::Mouse(iced_core::mouse::Event::ButtonReleased(
-                iced_core::mouse::Button::Left,
-            )) => {
+            iced_core::Event::Mouse(
+                iced_core::mouse::Event::CursorLeft
+                | iced_core::mouse::Event::ButtonReleased(iced_core::mouse::Button::Left),
+            ) => {
                 if *is_dragging {
                     *is_dragging = false;
                     let next_state = self.state;
-                    shell.publish((self.on_drag)(next_state));
+                    if next_state != self.state {
+                        shell.publish((self.on_drag)(next_state));
+                    }
                     shell.capture_event();
                     return;
                 }
@@ -160,10 +161,12 @@ where
                 if *is_dragging =>
             {
                 let relative_x = position.x - bounds.x;
-                let new_ratio = relative_x / bounds.width;
+                let new_ratio = (relative_x / bounds.width).clamp(0.0, 1.0);
                 let mut next_state = self.state;
                 next_state.set_ratio(new_ratio);
-                shell.publish((self.on_drag)(next_state));
+                if next_state != self.state {
+                    shell.publish((self.on_drag)(next_state));
+                }
                 shell.capture_event();
                 return;
             }
@@ -232,7 +235,7 @@ where
         let bounds = layout.bounds();
         let divider_x = bounds.width.mul_add(self.state.ratio(), bounds.x);
 
-        let is_hvoering = cursor.position().is_some_and(|position| {
+        let is_hovering = cursor.position().is_some_and(|position| {
             let hover_rect = iced_core::Rectangle {
                 x: divider_x - (self.drag_area_size / 2.0),
                 y: bounds.y,
@@ -244,7 +247,7 @@ where
 
         let status = if *tree.state.downcast_ref::<super::state::IsDragging>() {
             super::style::State::Dragging
-        } else if is_hvoering {
+        } else if is_hovering {
             super::style::State::Hovering
         } else {
             super::style::State::Idle

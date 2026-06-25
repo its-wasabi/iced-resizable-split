@@ -1,3 +1,5 @@
+// TODO: Extract common logic into common functions
+
 #![doc = include_str!("../README.md")]
 
 mod split_horizontal;
