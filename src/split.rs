@@ -1,28 +1,30 @@
-pub struct SplitVertical<'a, Message, Theme, Renderer> {
-    left: iced_core::Element<'a, Message, Theme, Renderer>,
-    right: iced_core::Element<'a, Message, Theme, Renderer>,
+pub struct Split<'a, Message, Theme, Renderer> {
+    axis: Axis,
+    first: iced_core::Element<'a, Message, Theme, Renderer>,
+    second: iced_core::Element<'a, Message, Theme, Renderer>,
 
     state: super::state::State,
     on_drag: Box<dyn Fn(super::state::State) -> Message + 'a>,
 
     drag_area_size: f32,
-
     style: super::style::StyleFn<'a, Theme>,
 }
 
-impl<'a, Message, Theme, Renderer> SplitVertical<'a, Message, Theme, Renderer>
+impl<'a, Message, Theme, Renderer> Split<'a, Message, Theme, Renderer>
 where
     Theme: 'a,
 {
     pub fn new(
-        left: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
-        right: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
+        axis: Axis,
+        first: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
+        second: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
         state: super::state::State,
         message: impl Fn(super::state::State) -> Message + 'a,
     ) -> Self {
         Self {
-            left: left.into(),
-            right: right.into(),
+            axis,
+            first: first.into(),
+            second: second.into(),
             state,
             on_drag: Box::new(message),
             drag_area_size: super::DEFAULT_DRAG_AREA_SIZE,
@@ -46,8 +48,83 @@ where
     }
 }
 
+impl<Message, Theme, Renderer> Split<'_, Message, Theme, Renderer> {
+    fn split_pos(&self, size: iced_core::Size) -> f32 {
+        match self.axis {
+            Axis::Vertical => size.width * self.state.ratio(),
+            Axis::Horizontal => size.height * self.state.ratio(),
+        }
+    }
+
+    const fn split_relative_position(&self, bounds: iced_core::Rectangle) -> f32 {
+        match self.axis {
+            Axis::Vertical => bounds.width.mul_add(self.state.ratio(), bounds.x),
+            Axis::Horizontal => bounds.height.mul_add(self.state.ratio(), bounds.y),
+        }
+    }
+
+    fn create_split_rect(&self, size: f32, bounds: iced_core::Rectangle) -> iced_core::Rectangle {
+        let divider_pos = self.split_relative_position(bounds);
+
+        match self.axis {
+            Axis::Vertical => iced_core::Rectangle {
+                x: divider_pos - (size / 2.0),
+                y: bounds.y,
+                width: size,
+                height: bounds.height,
+            },
+            Axis::Horizontal => iced_core::Rectangle {
+                x: bounds.x,
+                y: divider_pos - (size / 2.0),
+                width: bounds.width,
+                height: size,
+            },
+        }
+    }
+
+    fn limit_nodes_size(
+        &self,
+        size: iced_core::Size,
+        limits: iced_core::layout::Limits,
+        split_pos: f32,
+    ) -> (iced_core::layout::Limits, iced_core::layout::Limits) {
+        match self.axis {
+            Axis::Vertical => (
+                limits.max_width(split_pos),
+                limits.max_width(size.width - split_pos),
+            ),
+            Axis::Horizontal => (
+                limits.max_height(split_pos),
+                limits.max_height(size.height - split_pos),
+            ),
+        }
+    }
+
+    const fn second_node_position(&self, split_pos: f32) -> iced_core::Point {
+        match self.axis {
+            Axis::Vertical => iced_core::Point::new(split_pos, 0.0),
+            Axis::Horizontal => iced_core::Point::new(0.0, split_pos),
+        }
+    }
+
+    fn relative_position(&self, mouse_pos: iced_core::Point, bounds: iced_core::Rectangle) -> f32 {
+        match self.axis {
+            Axis::Vertical => mouse_pos.x - bounds.x,
+            Axis::Horizontal => mouse_pos.y - bounds.y,
+        }
+    }
+
+    fn ratio(&self, mouse_pos: iced_core::Point, bounds: iced_core::Rectangle) -> f32 {
+        let relative_mouse_position = self.relative_position(mouse_pos, bounds);
+        match self.axis {
+            Axis::Vertical => (relative_mouse_position / bounds.width).clamp(0.0, 1.0),
+            Axis::Horizontal => (relative_mouse_position / bounds.height).clamp(0.0, 1.0),
+        }
+    }
+}
+
 impl<Message, Theme, Renderer> iced_core::Widget<Message, Theme, Renderer>
-    for SplitVertical<'_, Message, Theme, Renderer>
+    for Split<'_, Message, Theme, Renderer>
 where
     Renderer: iced_core::renderer::Renderer,
 {
@@ -61,13 +138,13 @@ where
 
     fn children(&self) -> Vec<iced_core::widget::Tree> {
         vec![
-            iced_core::widget::Tree::new(&self.left),
-            iced_core::widget::Tree::new(&self.right),
+            iced_core::widget::Tree::new(&self.first),
+            iced_core::widget::Tree::new(&self.second),
         ]
     }
 
     fn diff(&self, tree: &mut iced_core::widget::Tree) {
-        tree.diff_children(&[&self.left, &self.right]);
+        tree.diff_children(&[&self.first, &self.second]);
     }
 
     fn size(&self) -> iced_core::Size<iced_core::Length> {
@@ -89,22 +166,21 @@ where
             iced_core::Size::ZERO,
         );
 
-        let split_x_pos = size.width * self.state.ratio();
+        let split_pos = self.split_pos(size);
+        let (first_limits, second_limits) = self.limit_nodes_size(size, limits, split_pos);
 
-        let left_limits = limits.max_width(split_x_pos);
-        let left_node =
-            self.left
+        let first_node =
+            self.first
                 .as_widget_mut()
-                .layout(&mut tree.children[0], renderer, &left_limits);
+                .layout(&mut tree.children[0], renderer, &first_limits);
 
-        let right_limits = limits.max_width(size.width - split_x_pos);
-        let right_node = self
-            .right
+        let socond_node = self
+            .second
             .as_widget_mut()
-            .layout(&mut tree.children[1], renderer, &right_limits)
-            .move_to(iced_core::Point::new(split_x_pos, 0.0));
+            .layout(&mut tree.children[1], renderer, &second_limits)
+            .move_to(self.second_node_position(split_pos));
 
-        iced_core::layout::Node::with_children(size, vec![left_node, right_node])
+        iced_core::layout::Node::with_children(size, vec![first_node, socond_node])
     }
 
     fn update(
@@ -119,14 +195,9 @@ where
         viewport: &iced_core::Rectangle,
     ) {
         let is_dragging = tree.state.downcast_mut::<super::state::IsDragging>();
+
         let bounds = layout.bounds();
-        let divider_x_pos = bounds.width.mul_add(self.state.ratio(), bounds.x);
-        let drag_rect = iced_core::Rectangle {
-            x: divider_x_pos - self.drag_area_size / 2.0,
-            y: bounds.y,
-            width: self.drag_area_size,
-            height: bounds.height,
-        };
+        let drag_rect = self.create_split_rect(self.drag_area_size, bounds);
 
         // TODO: Implement touch events
         match event {
@@ -160,13 +231,13 @@ where
             iced_core::Event::Mouse(iced_core::mouse::Event::CursorMoved { position })
                 if *is_dragging =>
             {
-                let relative_x = position.x - bounds.x;
-                let new_ratio = (relative_x / bounds.width).clamp(0.0, 1.0);
-                let mut next_state = self.state;
-                next_state.set_ratio(new_ratio);
+                let new_ratio = self.ratio(*position, bounds);
+
+                let next_state = self.state.copy_with_new_ratio(new_ratio);
                 if next_state != self.state {
                     shell.publish((self.on_drag)(next_state));
                 }
+
                 shell.capture_event();
                 return;
             }
@@ -175,7 +246,7 @@ where
         }
 
         let mut layouts = layout.children();
-        self.left.as_widget_mut().update(
+        self.first.as_widget_mut().update(
             &mut tree.children[0],
             event,
             layouts.next().unwrap(),
@@ -186,7 +257,7 @@ where
             viewport,
         );
 
-        self.right.as_widget_mut().update(
+        self.second.as_widget_mut().update(
             &mut tree.children[1],
             event,
             layouts.next().unwrap(),
@@ -212,7 +283,7 @@ where
         let left_layout = layouts.next().unwrap();
         let right_layout = layouts.next().unwrap();
 
-        self.left.as_widget().draw(
+        self.first.as_widget().draw(
             &tree.children[0],
             renderer,
             theme,
@@ -222,7 +293,7 @@ where
             viewport,
         );
 
-        self.right.as_widget().draw(
+        self.second.as_widget().draw(
             &tree.children[1],
             renderer,
             theme,
@@ -233,15 +304,8 @@ where
         );
 
         let bounds = layout.bounds();
-        let divider_x = bounds.width.mul_add(self.state.ratio(), bounds.x);
-
         let is_hovering = cursor.position().is_some_and(|position| {
-            let hover_rect = iced_core::Rectangle {
-                x: divider_x - (self.drag_area_size / 2.0),
-                y: bounds.y,
-                width: self.drag_area_size,
-                height: bounds.height,
-            };
+            let hover_rect = self.create_split_rect(self.drag_area_size, bounds);
             hover_rect.contains(position)
         });
 
@@ -257,12 +321,7 @@ where
 
         renderer.fill_quad(
             iced_core::renderer::Quad {
-                bounds: iced_core::Rectangle {
-                    x: divider_x - (style.divider_width / 2.0),
-                    y: bounds.y,
-                    width: style.divider_width,
-                    height: bounds.height,
-                },
+                bounds: self.create_split_rect(style.divider_width, bounds),
                 ..Default::default()
             },
             style.divider_color,
@@ -270,14 +329,19 @@ where
     }
 }
 
-impl<'a, Message, Theme, Renderer> From<SplitVertical<'a, Message, Theme, Renderer>>
+impl<'a, Message, Theme, Renderer> From<Split<'a, Message, Theme, Renderer>>
     for iced_core::Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
     Theme: 'a,
     Renderer: iced_core::Renderer + 'a,
 {
-    fn from(value: SplitVertical<'a, Message, Theme, Renderer>) -> Self {
+    fn from(value: Split<'a, Message, Theme, Renderer>) -> Self {
         Self::new(value)
     }
+}
+
+pub enum Axis {
+    Vertical,
+    Horizontal,
 }

@@ -17,7 +17,7 @@ impl App {
 
     const fn update(&mut self, msg: AppMessage) {
         match msg {
-            AppMessage::SplitDragged(new_state) => self.split_state = new_state,
+            AppMessage::SplitDragged(new_state) => self.split_state.update(new_state),
         }
     }
 

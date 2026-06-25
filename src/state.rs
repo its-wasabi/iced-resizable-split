@@ -32,6 +32,10 @@ impl State {
         *self = new_state;
     }
 
+    pub(super) const fn copy_with_new_ratio(&self, ratio: f32) -> Self {
+        Self { ratio, ..*self }
+    }
+
     pub(super) const fn ratio(&self) -> f32 {
         self.ratio
     }
