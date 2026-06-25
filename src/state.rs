@@ -39,8 +39,4 @@ impl State {
     pub(super) const fn ratio(&self) -> f32 {
         self.ratio
     }
-
-    pub(super) const fn set_ratio(&mut self, ratio: f32) {
-        self.ratio = ratio.clamp(self.first_split_min, self.second_split_min);
-    }
 }

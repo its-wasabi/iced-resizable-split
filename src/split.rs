@@ -174,13 +174,13 @@ where
                 .as_widget_mut()
                 .layout(&mut tree.children[0], renderer, &first_limits);
 
-        let socond_node = self
+        let second_node = self
             .second
             .as_widget_mut()
             .layout(&mut tree.children[1], renderer, &second_limits)
             .move_to(self.second_node_position(split_pos));
 
-        iced_core::layout::Node::with_children(size, vec![first_node, socond_node])
+        iced_core::layout::Node::with_children(size, vec![first_node, second_node])
     }
 
     fn update(
@@ -216,16 +216,12 @@ where
             iced_core::Event::Mouse(
                 iced_core::mouse::Event::CursorLeft
                 | iced_core::mouse::Event::ButtonReleased(iced_core::mouse::Button::Left),
-            ) => {
-                if *is_dragging {
-                    *is_dragging = false;
-                    let next_state = self.state;
-                    if next_state != self.state {
-                        shell.publish((self.on_drag)(next_state));
-                    }
-                    shell.capture_event();
-                    return;
-                }
+            ) if *is_dragging => {
+                *is_dragging = false;
+
+                shell.request_redraw();
+                shell.capture_event();
+                return;
             }
 
             iced_core::Event::Mouse(iced_core::mouse::Event::CursorMoved { position })
@@ -280,15 +276,15 @@ where
         viewport: &iced_core::Rectangle,
     ) {
         let mut layouts = layout.children();
-        let left_layout = layouts.next().unwrap();
-        let right_layout = layouts.next().unwrap();
+        let first_layout = layouts.next().unwrap();
+        let second_layout = layouts.next().unwrap();
 
         self.first.as_widget().draw(
             &tree.children[0],
             renderer,
             theme,
             style,
-            left_layout,
+            first_layout,
             cursor,
             viewport,
         );
@@ -298,7 +294,7 @@ where
             renderer,
             theme,
             style,
-            right_layout,
+            second_layout,
             cursor,
             viewport,
         );
