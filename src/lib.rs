@@ -4,7 +4,7 @@
 
 mod split_horizontal;
 mod split_vertical;
-mod state;
+pub mod state;
 pub mod style;
 
 pub use split_horizontal::SplitHorizontal;
