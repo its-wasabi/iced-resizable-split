@@ -248,22 +248,27 @@ where
             _ => {}
         }
 
-        let mut layouts = layout.children();
+        let children_layouts: Vec<_> = layout.children().collect();
+        assert_eq!(
+            children_layouts.len(),
+            2,
+            "Resizable Split Widget must have exactly 2 children"
+        );
+
         self.first.as_widget_mut().update(
             &mut tree.children[0],
             event,
-            layouts.next().unwrap(),
+            children_layouts[0],
             cursor,
             renderer,
             clipboard,
             shell,
             viewport,
         );
-
         self.second.as_widget_mut().update(
             &mut tree.children[1],
             event,
-            layouts.next().unwrap(),
+            children_layouts[1],
             cursor,
             renderer,
             clipboard,
@@ -282,16 +287,19 @@ where
         cursor: iced_core::mouse::Cursor,
         viewport: &iced_core::Rectangle,
     ) {
-        let mut layouts = layout.children();
-        let first_layout = layouts.next().unwrap();
-        let second_layout = layouts.next().unwrap();
+        let children_layouts: Vec<_> = layout.children().collect();
+        assert_eq!(
+            children_layouts.len(),
+            2,
+            "Resizable Split Widget must have exactly 2 children"
+        );
 
         self.first.as_widget().draw(
             &tree.children[0],
             renderer,
             theme,
             style,
-            first_layout,
+            children_layouts[0],
             cursor,
             viewport,
         );
@@ -301,7 +309,7 @@ where
             renderer,
             theme,
             style,
-            second_layout,
+            children_layouts[1],
             cursor,
             viewport,
         );
