@@ -37,6 +37,7 @@ impl State {
     }
 
     pub(super) const fn copy_with_new_ratio(&self, ratio: f32) -> Self {
+        let ratio = ratio.clamp(self.first_split_min, self.second_split_min);
         Self { ratio, ..*self }
     }
 
