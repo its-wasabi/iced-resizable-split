@@ -39,7 +39,7 @@ fn default_style(theme: &iced_core::Theme, status: Status) -> Style {
             divider_width: 1.0,
         },
         Status::Hovering => Style {
-            divider_color: palette.primary.base.color,
+            divider_color: palette.primary.weak.color,
             divider_width: 1.0,
         },
         Status::Dragging => Style {

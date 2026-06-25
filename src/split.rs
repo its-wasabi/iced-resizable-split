@@ -106,20 +106,20 @@ where
     ) -> (iced_core::layout::Limits, iced_core::layout::Limits) {
         match self.axis {
             Axis::Vertical => (
-                limits.max_width(split_pos),
-                limits.max_width(size.width - split_pos),
+                limits.max_width(split_pos - super::SPLIT_LAYOUT_SIZE / 2.0),
+                limits.max_width((size.width - split_pos) - super::SPLIT_LAYOUT_SIZE / 2.0),
             ),
             Axis::Horizontal => (
-                limits.max_height(split_pos),
-                limits.max_height(size.height - split_pos),
+                limits.max_height(split_pos - super::SPLIT_LAYOUT_SIZE),
+                limits.max_height((size.height - split_pos) - super::SPLIT_LAYOUT_SIZE),
             ),
         }
     }
 
     const fn second_node_position(&self, split_pos: f32) -> iced_core::Point {
         match self.axis {
-            Axis::Vertical => iced_core::Point::new(split_pos, 0.0),
-            Axis::Horizontal => iced_core::Point::new(0.0, split_pos),
+            Axis::Vertical => iced_core::Point::new(split_pos + super::SPLIT_LAYOUT_SIZE, 0.0),
+            Axis::Horizontal => iced_core::Point::new(0.0, split_pos + super::SPLIT_LAYOUT_SIZE),
         }
     }
 
