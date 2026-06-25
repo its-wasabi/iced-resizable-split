@@ -1,20 +1,26 @@
-pub struct Split<'a, Message, Renderer> {
+pub struct Split<'a, Message, Renderer, Theme = iced_core::Theme>
+where
+    Theme: super::style::Catalog,
+{
     axis: Axis,
-    first: iced_core::Element<'a, Message, iced_core::Theme, Renderer>,
-    second: iced_core::Element<'a, Message, iced_core::Theme, Renderer>,
+    first: iced_core::Element<'a, Message, Theme, Renderer>,
+    second: iced_core::Element<'a, Message, Theme, Renderer>,
 
     state: super::state::State,
     on_drag: Box<dyn Fn(super::state::State) -> Message + 'a>,
 
     drag_area_size: f32,
-    style: super::style::StyleFn<'a>,
+    class: Theme::Class<'a>,
 }
 
-impl<'a, Message, Renderer> Split<'a, Message, Renderer> {
+impl<'a, Message, Theme, Renderer> Split<'a, Message, Renderer, Theme>
+where
+    Theme: super::style::Catalog,
+{
     pub fn new(
         axis: Axis,
-        first: impl Into<iced_core::Element<'a, Message, iced_core::Theme, Renderer>>,
-        second: impl Into<iced_core::Element<'a, Message, iced_core::Theme, Renderer>>,
+        first: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
+        second: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>,
         state: super::state::State,
         message: impl Fn(super::state::State) -> Message + 'a,
     ) -> Self {
@@ -25,32 +31,26 @@ impl<'a, Message, Renderer> Split<'a, Message, Renderer> {
             state,
             on_drag: Box::new(message),
             drag_area_size: super::DEFAULT_DRAG_AREA_SIZE,
-            style: Box::new(|theme, state| {
-                let palette = theme.extended_palette();
-                match state {
-                    crate::style::State::Idle => super::style::Style {
-                        divider_color: palette.background.strong.color,
-                        divider_width: 1.0,
-                    },
-                    crate::style::State::Hovering => super::style::Style {
-                        divider_color: palette.primary.base.color,
-                        divider_width: 1.0,
-                    },
-                    crate::style::State::Dragging => super::style::Style {
-                        divider_color: palette.primary.strong.color,
-                        divider_width: 1.0,
-                    },
-                }
-            }),
+            class: Theme::default(),
         }
     }
 
     #[must_use]
     pub fn style(
         mut self,
-        style: impl Fn(&iced_core::Theme, super::style::State) -> super::style::Style + 'a,
-    ) -> Self {
-        self.style = Box::new(style);
+        style: impl Fn(&Theme, super::style::Status) -> super::style::Style + 'a,
+    ) -> Self
+    where
+        Theme::Class<'a>: From<super::style::StyleFn<'a, Theme>>,
+    {
+        self.class = (Box::new(style) as super::style::StyleFn<'a, Theme>).into();
+        self
+    }
+
+    #[cfg(feature = "advanced")]
+    #[must_use]
+    pub fn class(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
+        self.class = class.into();
         self
     }
 
@@ -61,7 +61,10 @@ impl<'a, Message, Renderer> Split<'a, Message, Renderer> {
     }
 }
 
-impl<Message, Renderer> Split<'_, Message, Renderer> {
+impl<Message, Theme, Renderer> Split<'_, Message, Renderer, Theme>
+where
+    Theme: super::style::Catalog,
+{
     fn split_pos(&self, size: iced_core::Size) -> f32 {
         match self.axis {
             Axis::Vertical => size.width * self.state.ratio(),
@@ -136,9 +139,10 @@ impl<Message, Renderer> Split<'_, Message, Renderer> {
     }
 }
 
-impl<Message, Renderer> iced_core::Widget<Message, iced_core::Theme, Renderer>
-    for Split<'_, Message, Renderer>
+impl<Message, Theme, Renderer> iced_core::Widget<Message, Theme, Renderer>
+    for Split<'_, Message, Renderer, Theme>
 where
+    Theme: super::style::Catalog,
     Renderer: iced_core::renderer::Renderer,
 {
     fn tag(&self) -> iced_core::widget::tree::Tag {
@@ -296,7 +300,7 @@ where
         &self,
         tree: &iced_core::widget::Tree,
         renderer: &mut Renderer,
-        theme: &iced_core::Theme,
+        theme: &Theme,
         style: &iced_core::renderer::Style,
         layout: iced_core::Layout<'_>,
         cursor: iced_core::mouse::Cursor,
@@ -331,21 +335,21 @@ where
 
         let internal_state = tree.state.downcast_ref::<super::state::InternalState>();
         let status = if internal_state.is_dragging {
-            super::style::State::Dragging
+            super::style::Status::Dragging
         } else if internal_state.is_hovering {
-            super::style::State::Hovering
+            super::style::Status::Hovering
         } else {
-            super::style::State::Idle
+            super::style::Status::Idle
         };
 
-        let style = (self.style)(theme, status);
+        let resolved = theme.style(&self.class, status);
 
         renderer.fill_quad(
             iced_core::renderer::Quad {
-                bounds: self.create_split_rect(style.divider_width, layout.bounds()),
+                bounds: self.create_split_rect(resolved.divider_width, layout.bounds()),
                 ..Default::default()
             },
-            style.divider_color,
+            resolved.divider_color,
         );
     }
 
@@ -371,13 +375,14 @@ where
     }
 }
 
-impl<'a, Message, Renderer> From<Split<'a, Message, Renderer>>
-    for iced_core::Element<'a, Message, iced_core::Theme, Renderer>
+impl<'a, Message, Theme, Renderer> From<Split<'a, Message, Renderer, Theme>>
+    for iced_core::Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
+    Theme: super::style::Catalog + 'a,
     Renderer: iced_core::Renderer + 'a,
 {
-    fn from(value: Split<'a, Message, Renderer>) -> Self {
+    fn from(value: Split<'a, Message, Renderer, Theme>) -> Self {
         Self::new(value)
     }
 }

@@ -13,5 +13,8 @@ readme = "README.md"
 keywords = ["iced"]
 categories = ["graphics"]
 
+[features]
+advanced = []
+
 [dependencies]
 iced_core = "0.14.0"
