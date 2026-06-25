@@ -323,6 +323,27 @@ where
             style.divider_color,
         );
     }
+
+    fn mouse_interaction(
+        &self,
+        _tree: &iced_core::widget::Tree,
+        layout: iced_core::Layout<'_>,
+        cursor: iced_core::mouse::Cursor,
+        _viewport: &iced_core::Rectangle,
+        _renderer: &Renderer,
+    ) -> iced_core::mouse::Interaction {
+        let drag_rect = self.create_split_rect(self.drag_area_size, layout.bounds());
+        if let Some(position) = cursor.position()
+            && drag_rect.contains(position)
+        {
+            match self.axis {
+                Axis::Vertical => iced_core::mouse::Interaction::ResizingHorizontally,
+                Axis::Horizontal => iced_core::mouse::Interaction::ResizingVertically,
+            }
+        } else {
+            iced_core::mouse::Interaction::None
+        }
+    }
 }
 
 impl<'a, Message, Theme, Renderer> From<Split<'a, Message, Theme, Renderer>>
