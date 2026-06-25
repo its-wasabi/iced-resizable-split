@@ -19,5 +19,5 @@ pub enum State {
     Dragging,
 }
 
-pub(super) type StyleFn<'a, Theme> =
+pub(crate) type StyleFn<'a, Theme> =
     Box<dyn Fn(&Theme, super::style::State) -> super::style::Style + 'a>;

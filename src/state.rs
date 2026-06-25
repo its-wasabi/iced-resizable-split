@@ -17,9 +17,9 @@ impl Default for State {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
-pub(super) struct InternalState {
-    pub(super) is_dragging: bool,
-    pub(super) is_hovering: bool,
+pub(crate) struct InternalState {
+    pub(crate) is_dragging: bool,
+    pub(crate) is_hovering: bool,
 }
 
 impl State {
@@ -36,12 +36,12 @@ impl State {
         *self = new_state;
     }
 
-    pub(super) const fn copy_with_new_ratio(&self, ratio: f32) -> Self {
+    pub(crate) const fn copy_with_new_ratio(&self, ratio: f32) -> Self {
         let ratio = ratio.clamp(self.first_split_min, self.second_split_min);
         Self { ratio, ..*self }
     }
 
-    pub(super) const fn ratio(&self) -> f32 {
+    pub(crate) const fn ratio(&self) -> f32 {
         self.ratio
     }
 }

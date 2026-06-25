@@ -1,13 +1,9 @@
-// TODO: Extract common logic into common functions
-
 #![doc = include_str!("../README.md")]
 
 mod split;
 pub mod state;
 pub mod style;
 
-pub use split::Axis;
-pub use split::Split;
 pub use state::State;
 pub use style::Style;
 
