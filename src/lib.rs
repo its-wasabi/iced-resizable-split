@@ -10,7 +10,7 @@ pub use split_vertical::SplitVertical;
 pub use state::State;
 pub use style::Style;
 
-const DEFAULT_DRAG_AREA_SIZE: f32 = 8.0;
+const DEFAULT_DRAG_AREA_SIZE: f32 = 12.0;
 
 #[allow(unused)]
 fn split_horizontal<'a, Message, Theme, Renderer>(

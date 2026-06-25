@@ -4,8 +4,6 @@ pub struct State {
 
     first_split_min: f32,
     second_split_min: f32,
-
-    is_dragging: bool,
 }
 
 impl Default for State {
@@ -14,10 +12,11 @@ impl Default for State {
             ratio: 0.5,
             first_split_min: 0.05,
             second_split_min: 0.95,
-            is_dragging: false,
         }
     }
 }
+
+pub(super) type IsDragging = bool;
 
 impl State {
     #[must_use]
@@ -26,7 +25,6 @@ impl State {
             ratio: initial_ratio,
             first_split_min,
             second_split_min,
-            is_dragging: false,
         }
     }
 
@@ -42,15 +40,5 @@ impl State {
         self.ratio = ratio.clamp(self.first_split_min, self.second_split_min);
     }
 
-    pub(super) const fn start_drag(&mut self) {
-        self.is_dragging = true;
-    }
-
-    pub(super) const fn stop_drag(&mut self) {
-        self.is_dragging = false;
-    }
-
-    pub(super) const fn is_dragging(&self) -> bool {
-        self.is_dragging
-    }
+    pub(super) const fn stop_drag(&mut self) {}
 }

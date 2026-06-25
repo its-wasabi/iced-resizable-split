@@ -15,6 +15,7 @@ impl Default for Style {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum State {
     Idle,
+    Hovering,
     Dragging,
 }
 
