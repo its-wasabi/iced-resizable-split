@@ -133,8 +133,20 @@ where
     fn ratio(&self, mouse_pos: iced_core::Point, bounds: iced_core::Rectangle) -> f32 {
         let relative_mouse_position = self.relative_position(mouse_pos, bounds);
         match self.axis {
-            Axis::Vertical => (relative_mouse_position / bounds.width).clamp(0.0, 1.0),
-            Axis::Horizontal => (relative_mouse_position / bounds.height).clamp(0.0, 1.0),
+            Axis::Vertical => {
+                if bounds.width <= 0.0 {
+                    0.0
+                } else {
+                    (relative_mouse_position / bounds.width).clamp(0.0, 1.0)
+                }
+            }
+            Axis::Horizontal => {
+                if bounds.height <= 0.0 {
+                    0.0
+                } else {
+                    (relative_mouse_position / bounds.height).clamp(0.0, 1.0)
+                }
+            }
         }
     }
 }
