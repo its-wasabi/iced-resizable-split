@@ -1,6 +1,7 @@
 pub struct Style {
     pub divider_color: iced_core::Color,
     pub divider_width: f32,
+    pub snap: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,14 +38,17 @@ fn default_style(theme: &iced_core::Theme, status: Status) -> Style {
         Status::Idle => Style {
             divider_color: palette.background.strong.color,
             divider_width: 1.0,
+            snap: true,
         },
         Status::Hovering => Style {
             divider_color: palette.primary.weak.color,
             divider_width: 1.0,
+            snap: true,
         },
         Status::Dragging => Style {
             divider_color: palette.primary.strong.color,
             divider_width: 1.0,
+            snap: true,
         },
     }
 }
