@@ -347,6 +347,7 @@ where
         renderer.fill_quad(
             iced_core::renderer::Quad {
                 bounds: self.create_split_rect(resolved.divider_width, layout.bounds()),
+                snap: true,
                 ..Default::default()
             },
             resolved.divider_color,
