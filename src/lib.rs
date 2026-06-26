@@ -9,7 +9,6 @@ pub use style::Status;
 pub use style::Style;
 
 const DEFAULT_DRAG_AREA_SIZE: f32 = 12.0;
-const SPLIT_LAYOUT_SIZE: f32 = 1.0;
 
 #[allow(unused)]
 pub fn split_horizontal<'a, Message, Theme, Renderer>(

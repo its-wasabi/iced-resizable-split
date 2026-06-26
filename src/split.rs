@@ -106,20 +106,20 @@ where
     ) -> (iced_core::layout::Limits, iced_core::layout::Limits) {
         match self.axis {
             Axis::Vertical => (
-                limits.max_width(split_pos - super::SPLIT_LAYOUT_SIZE / 2.0),
-                limits.max_width((size.width - split_pos) - super::SPLIT_LAYOUT_SIZE / 2.0),
+                limits.max_width(split_pos),
+                limits.max_width(size.width - split_pos),
             ),
             Axis::Horizontal => (
-                limits.max_height(split_pos - super::SPLIT_LAYOUT_SIZE),
-                limits.max_height((size.height - split_pos) - super::SPLIT_LAYOUT_SIZE),
+                limits.max_height(split_pos),
+                limits.max_height(size.height - split_pos),
             ),
         }
     }
 
     const fn second_node_position(&self, split_pos: f32) -> iced_core::Point {
         match self.axis {
-            Axis::Vertical => iced_core::Point::new(split_pos + super::SPLIT_LAYOUT_SIZE, 0.0),
-            Axis::Horizontal => iced_core::Point::new(0.0, split_pos + super::SPLIT_LAYOUT_SIZE),
+            Axis::Vertical => iced_core::Point::new(split_pos, 0.0),
+            Axis::Horizontal => iced_core::Point::new(0.0, split_pos),
         }
     }
 
@@ -355,22 +355,49 @@ where
 
     fn mouse_interaction(
         &self,
-        _tree: &iced_core::widget::Tree,
+        tree: &iced_core::widget::Tree,
         layout: iced_core::Layout<'_>,
         cursor: iced_core::mouse::Cursor,
-        _viewport: &iced_core::Rectangle,
-        _renderer: &Renderer,
+        viewport: &iced_core::Rectangle,
+        renderer: &Renderer,
     ) -> iced_core::mouse::Interaction {
-        let drag_rect = self.create_split_rect(self.drag_area_size, layout.bounds());
-        if let Some(position) = cursor.position()
-            && drag_rect.contains(position)
-        {
+        let internal_state = tree.state.downcast_ref::<super::state::InternalState>();
+
+        if internal_state.is_dragging || internal_state.is_hovering {
             match self.axis {
                 Axis::Vertical => iced_core::mouse::Interaction::ResizingHorizontally,
                 Axis::Horizontal => iced_core::mouse::Interaction::ResizingVertically,
             }
         } else {
-            iced_core::mouse::Interaction::None
+            let mut children = layout.children();
+
+            let first_interaction =
+                children
+                    .next()
+                    .map_or(iced_core::mouse::Interaction::None, |layout| {
+                        self.first.as_widget().mouse_interaction(
+                            &tree.children[0],
+                            layout,
+                            cursor,
+                            viewport,
+                            renderer,
+                        )
+                    });
+
+            let second_interaction =
+                children
+                    .next()
+                    .map_or(iced_core::mouse::Interaction::None, |layout| {
+                        self.second.as_widget().mouse_interaction(
+                            &tree.children[1],
+                            layout,
+                            cursor,
+                            viewport,
+                            renderer,
+                        )
+                    });
+
+            first_interaction.max(second_interaction)
         }
     }
 }
